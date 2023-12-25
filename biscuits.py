@@ -84,7 +84,7 @@ class Roll:
                         possible_biscuits.append(deepcopy(biscuit_type))
                 if biscuit_perfect_fit is not None:
                     self._biscuits.append(deepcopy(biscuit_perfect_fit))
-                    position +=
+                    position += biscuit_perfect_fit.size
                 self._biscuits += possible_biscuits
                 position += sum([biscuit.size for biscuit in possible_biscuits])
             else:
