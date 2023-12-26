@@ -1,9 +1,10 @@
 from biscuits import biscuit_types, defects_list, Roll
 
+
 # Helper function to check if a biscuit can be placed considering defects and overlapping
 def is_valid_position(start, biscuit, roll, defects_list):
     # Check for overlap
-    for other in roll._biscuits:
+    for other in roll.get_biscuits():
         if start < other['end'] and other['start'] < start + biscuit.size:
             return False  # Overlap detected
 
@@ -16,10 +17,11 @@ def is_valid_position(start, biscuit, roll, defects_list):
     
     return biscuit.is_valid(defect_counts)
 
+
 # Backtracking algorithm
 def place_biscuits(roll, biscuits, defects_list, position=0):
     if position >= roll.roll_size:  # Reached the end of the roll
-        return roll.total_value(), roll._biscuits.copy()
+        return roll.total_value(), roll.get_biscuits().copy()
 
     max_value = 0
     best_arrangement = None
@@ -32,14 +34,16 @@ def place_biscuits(roll, biscuits, defects_list, position=0):
             roll.append_biscuits(biscuit_dict)  # Now passing a dict object
             # Recurse to the next position
             value, arrangement = place_biscuits(roll, biscuits, defects_list, position + biscuit.size)
+        else:
+            # Consider not placing a biscuit at this position
+            value, arrangement = place_biscuits(roll, biscuits, defects_list, position + 1)
 
-    # Consider not placing a biscuit at this position
-    value, arrangement = place_biscuits(roll, biscuits, defects_list, position + 1)
-    if value > max_value:
-        max_value = value
-        best_arrangement = arrangement
+        if value > max_value:
+            max_value = value
+            best_arrangement = arrangement
 
     return max_value, best_arrangement
+
 
 # Instantiate a Roll object
 roll = Roll(roll_size=500)
