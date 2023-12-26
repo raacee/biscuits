@@ -1,4 +1,5 @@
 import numpy as np
+from biscuits import Roll, biscuit_types
 from numpy.random import default_rng
 
 # assign rng
@@ -23,32 +24,27 @@ names = ["Patricia",
          "Zoé"]
 
 
+def evaluate_roll(roll):
+    return roll.total_price()
+
+
 # This function by default searches for the maximum of the objective function
 # Use the opposite of the function if you are searching for the minimum
 def bee_search(obj_func,
-               food_type,
-               search_space,
                minimize=False,
                n_bees=10,
                n_workers=None,
                n_scouts=1,
                max_iter=1000,
-               limit=5,
-               step=1):
+               limit=5):
     # The minimize parameter indicates whether the objective function should be minimized,
     # in which case it should maximize the opposite, or not.
     if minimize:
-        def fitness(input_vect):
-            return -1 * obj_func(input_vect)
+        def fitness(roll):
+            return -1 * obj_func(roll)
     else:
-        def fitness(input_vect):
-            return obj_func(input_vect)
-
-    # Some value and parameter checking
-    if search_space.shape[1] != 2 and search_space.shape[0] != 2:
-        raise ValueError(
-            "search_space is of wrong shape, it should have a shape of (*,2) or (2,*), \
-            reshape or change search space")
+        def fitness(roll):
+            return obj_func(roll)
 
     # initializing the number of worker bees, if None
     if n_workers is None:
@@ -68,7 +64,7 @@ def bee_search(obj_func,
 
     # generate an array of random coordinates in the search space
     # of shape [[...] * food_sources_initial]
-    initial_foods = generate_new_food(search_space, n_foods, quantity=limit)
+    initial_foods = generate_new_food(n_foods, food_quantity=limit)
 
     # Send all workers at the initial food
     for worker, food in zip(hive.get_workers(), initial_foods):
@@ -77,11 +73,11 @@ def bee_search(obj_func,
 
     # Get the initial best food
     best_quality_food = max(hive.get_workers(), key=lambda worker_bee: worker_bee.food.quality).food
-    
+
     # Algorithm loop
     for i in range(max_iter):
         """Workers phase"""
-        
+
         for worker in hive.get_workers():
             # We first check if the source has been depleted by the onlookers
             # Indeed we gave the ability for onlooker to bring food to the hive, 
@@ -93,11 +89,11 @@ def bee_search(obj_func,
                 hive.get_scouts().append(new_scout)
                 hive.get_workers().remove(worker)
                 continue
-                
-            worker.dance() # Workers register their food source and give them a food source quality value            
-            
+
+            worker.dance()  # Workers register their food source and give them a food source quality value
+
             # Search for a better food source around the current food source
-            new_solution = worker.look_around(step)
+            new_solution = worker.look_around()
             # Evaluate food source
             new_solution_evaluation = worker.calculate_nectar(new_solution)
             # If food source is better, discard old food source and select new open
@@ -118,14 +114,16 @@ def bee_search(obj_func,
         # Onlookers choose a food source, among the worker ones.
         # This choice is made by probabilities, 
         # otherwise they'd just choose the best one and never explore around the other ones.
-        
+
         # Calculate the probability value of the sources
         # with which they are preferred by the onlooker bees
         # First they watch the bees dance
         # choreography is of type (worker, worker.food, food.quality)
         choreography = np.array([worker.dance() for worker in hive.get_workers()])
         # print([c.quality for c in choreography[:, 0]])
-        choreography[:, 1] = np.abs(choreography[:, 1])
+        choreography[:, 1] = np.array([dance if dance > float('-inf') else 0 for dance in choreography[:, 1]])
+        # convert -inf to 0
+        choreography[:, 1] = np.abs(np.nan_to_num(choreography[:, 1]))
         # calculate the sum of all the qualities
         sum_dances = np.sum(choreography[:, 1])
         # for functions that are flat on most of their definition space, sum could be zero
@@ -143,7 +141,7 @@ def bee_search(obj_func,
             onlooker.choose_preferred_source(choreography[:, 0], probabilities)
             onlooker.dance()
             # Onlookers search for a new food source
-            new_solution = onlooker.look_around(step)
+            new_solution = onlooker.look_around()
             # Evaluate food source
             new_solution_evaluation = onlooker.calculate_nectar(new_solution)
             # If food source is better, discard old food source and select new food source
@@ -164,15 +162,13 @@ def bee_search(obj_func,
         # Scouts search for a new food source around the search space. 
         for scout in hive.get_scouts():
             # Find a new food source
-            scout.find_new_food(search_space, limit)
+            scout.find_new_food(quantity=limit)
             # Convert back to worker and go on that food source
             new_worker = scout.convert_worker(fitness)
             hive.get_scouts().remove(scout)
             hive.get_workers().append(new_worker)
 
-        # We made that function to be a python generator
-        # As shown in the notebook, the function returns the iteration and the best quality food at each iteration
-        yield i, best_quality_food
+    return best_quality_food
 
 
 class Hive:
@@ -191,13 +187,6 @@ class Hive:
 
     def get_unemployed(self):
         return self.bees['scouts'] + self.bees['onlookers']
-
-    def get_all_bees(self):
-        return self.get_unemployed() + self.bees['workers']
-
-    def collective_memory(self):
-        map(lambda bee: (bee.dance(), bee.food),
-            self.get_scouts() + self.get_workers())
 
 
 class Bee:
@@ -228,10 +217,8 @@ class EmployedBee(Bee):
     def bring_food(self):
         self.food.quantity -= 1
 
-    def look_around(self, step=1):
-        new_location = single_axis_change(self.food, step)
-        new_food = Food(new_location)
-        return new_food
+    def look_around(self):
+        return single_axis_change(self.food)
 
     def dance(self):
         if self.food.quality is None:
@@ -258,8 +245,8 @@ class Onlooker(EmployedBee):
 
 class Scout(Bee):
 
-    def find_new_food(self, ranges, quantity=1):
-        new_food = generate_new_food(ranges, 1, quantity)[0]
+    def find_new_food(self, quantity=1):
+        new_food = generate_new_food(1, quantity)
         self.food = new_food
 
     def convert_worker(self, evaluate):
@@ -267,19 +254,31 @@ class Scout(Bee):
 
 
 # generate an array of random coordinates in the search space of shape  (*,food_sources_initial)
-def generate_new_food(food_type, food_source_ranges, number_of_food_sources, quantity=1):
-    start, end = food_source_ranges
-    foods = np.array([
-        Food(rng.uniform(start, end), quantity=quantity) for _ in range(number_of_food_sources)
-    ])
+def generate_new_food(number_of_food_sources, food_quantity=5):
+    if number_of_food_sources == 1:
+        new_roll = Roll(500)
+        new_roll.fill_roll_random()
+        return Food(new_roll, quantity=food_quantity)
+
+    foods = []
+    for i in range(number_of_food_sources):
+        new_roll = Roll(500)
+        new_roll.fill_roll_random()
+        foods.append(Food(new_roll, quantity=food_quantity))
+
     return foods
 
 
-def single_axis_change(original_food, search_step):
-    ivar = rng.integers(original_food.location.shape[0])
-    new_location = original_food.location.copy()
-    new_location[ivar] += new_location[ivar] + search_step * rng.uniform(-0.5, 0.5)
-    return new_location
+def single_axis_change(original_food, quantity=5):
+    old_roll = original_food.location
+    number_of_biscuits = old_roll.number_of_biscuits()
+    swap_index = rng.integers(number_of_biscuits)
+    new_roll = old_roll
+    new_roll.get_biscuits().pop(swap_index)
+    new_biscuit = rng.choice(biscuit_types)
+    new_roll.insert_biscuits(swap_index, new_biscuit)
+    new_food = Food(new_roll, quantity=quantity)
+    return new_food
 
 
 class Food:
@@ -295,3 +294,13 @@ class Food:
 
     def is_exhausted(self):
         return self.quantity == 0
+
+
+print(
+    bee_search(evaluate_roll,
+               minimize=False,
+               n_bees=50,
+               n_scouts=1,
+               max_iter=10,
+               limit=1).location.total_price()
+)
