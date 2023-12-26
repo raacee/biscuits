@@ -7,11 +7,9 @@ rng = np.random.default_rng()
 with open('defects.csv', 'r') as f:
     defects_list = DictReader(f)
 
-
     def x_to_float(elem):
         elem['x'] = float(elem['x'])
         return elem
-
 
     defects_list = map(x_to_float, defects_list)
     defects_list = list(sorted(defects_list, key=lambda d: d['x']))
@@ -43,6 +41,9 @@ class Roll:
         self.roll_size = roll_size
         self._biscuits = []
 
+    def get_biscuits(self):
+        return self._biscuits
+
     def append_biscuits(self, biscuits):
         if isinstance(biscuits, list):
             self._biscuits += biscuits
@@ -56,7 +57,7 @@ class Roll:
 
     def mix_biscuits(self, copy=False):
         if copy:
-            new_biscuits = self._biscuits.copy()
+            new_biscuits = deepcopy(self._biscuits)
             rng.shuffle(new_biscuits)
             return new_biscuits
         else:
@@ -68,38 +69,35 @@ class Roll:
     def number_of_biscuits(self):
         return len(self._biscuits)
 
-    def fill_roll_random(self, adjust_invalid_biscuits=False):
-        integers = rng.integers(0, 3, 500)
-        length_of_roll = 0
+    def fill_roll_random(self, remove_invalid_biscuits=False):
+        integers = rng.integers(0, 3, 250)
         position = 0
         for i in integers:
-            new_biscuit = deepcopy(biscuit_types[i])
-            if length_of_roll + new_biscuit.size >= self.roll_size:
-                for biscuit_type in biscuit_types:
-                    possible_biscuits = []
-                    if biscuit_type.size == self.roll_size - length_of_roll:
-                        biscuit_perfect_fit = biscuit_type
-                        self._biscuits.append(biscuit_type)
-                    elif biscuit_type.size < self.roll_size - length_of_roll:
-                        possible_biscuits.append(deepcopy(biscuit_type))
-                if biscuit_perfect_fit is not None:
-                    self._biscuits.append(deepcopy(biscuit_perfect_fit))
-                    position += biscuit_perfect_fit.size
-                self._biscuits += possible_biscuits
-                position += sum([biscuit.size for biscuit in possible_biscuits])
+            new_biscuit = biscuit_types[i]
+            if position + new_biscuit.size >= self.roll_size:
+                return
             else:
-                self._biscuits.append(new_biscuit)
-                length_of_roll += new_biscuit.size
+                if remove_invalid_biscuits:
+                    defects_in_range = Roll.get_defects_between(position, position + new_biscuit.size)
+                    if not new_biscuit.is_valid(defects_in_range):
+                        self.append_biscuits([None])
+                    else:
+                        self.append_biscuits(new_biscuit)
+                else:
+                    self.append_biscuits(new_biscuit)
 
-    def check_roll_biscuits(self, start=0):
-        position = start
+    def check_biscuits_tolerance(self):
+        position = 0
         for i, biscuit in enumerate(self._biscuits):
-            defects = dict()
-            defects_in_range = Roll.get_defects_between(position, position + biscuit.size)
-            for defect in defects_in_range:
+            if biscuit is None:
+                position += 1
+                continue
+
+            total_defects_at_position = dict()
+            for defect in Roll.get_defects_between(position, position + biscuit.size):
                 defect_class = defect['class']
-                defects[defect_class] += 1
-            if biscuit.is_valid(defects):
+                total_defects_at_position[defect_class] += 1
+            if biscuit.is_valid(total_defects_at_position):
                 return False, i
 
         return True
@@ -107,3 +105,7 @@ class Roll:
     @staticmethod
     def get_defects_between(a, b):
         return filter(lambda roll_defect: a < roll_defect['x'] < b, defects_list)
+
+    @staticmethod
+    def get_defects_between_iter(a, b):
+        pass
