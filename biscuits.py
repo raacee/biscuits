@@ -22,17 +22,35 @@ class Biscuit:
         self.tolerance = tolerance
 
     def is_valid(self, defects):
-        for defect_type, defect_number in defects.items():
-            if defect_number >= self.tolerance[defect_type]:
+        defects_dict = self.dict_sums_defects(defects)
+        if defects_dict.keys() != self.tolerance.keys():
+            return False
+        for k in defects_dict:
+            if self.tolerance[k] < defects_dict[k]:
                 return False
         return True
 
+    @staticmethod
+    def dict_sums_defects(defects):
+        possible_defects = set([list(defect.values())[1] for defect in defects])
+        defects_sums = {defect_type: 0 for defect_type in possible_defects}
 
+        for defect in defects:
+            defecty_type = defect['class']
+            defects_sums[defecty_type] += 1
+
+        return defects_sums
+
+
+# array of different types of biscuit
+# this array will contain the 4 types of biscuit
+# it will also provide the program with 4 pointers (each for each type of biscuit),
+# that will allow to access biscuit characteristics without copying the instance
 biscuit_types = [
-    Biscuit(4, 6, {'a': 4, 'b': 2, 'c': 3}),
     Biscuit(8, 12, {'a': 5, 'b': 4, 'c': 4}),
-    Biscuit(2, 1, {'a': 1, 'b': 2, 'c': 1}),
-    Biscuit(5, 8, {'a': 2, 'b': 3, 'c': 2})
+    Biscuit(5, 8, {'a': 2, 'b': 3, 'c': 2}),
+    Biscuit(4, 6, {'a': 4, 'b': 2, 'c': 3}),
+    Biscuit(2, 1, {'a': 1, 'b': 2, 'c': 1})
 ]
 
 
@@ -41,8 +59,14 @@ class Roll:
         self.roll_size = roll_size
         self._biscuits = []
 
-    def get_biscuits(self):
-        return self._biscuits
+    def __str__(self):
+        return str(self._biscuits)
+
+    def get_biscuits(self, index1=0, index2=None):
+        return self._biscuits[index1:index2]
+
+    def insert_biscuits(self, index, biscuit):
+        self._biscuits.insert(index, biscuit)
 
     def append_biscuits(self, biscuits):
         if isinstance(biscuits, list):
@@ -52,7 +76,11 @@ class Roll:
         else:
             raise ValueError('Biscuits should be a list or a Biscuit')
 
-    def invert_biscuits(self, index1, index2):
+    def invert_biscuits(self, index1, index2, copy=False):
+        if copy:
+            roll_copy = deepcopy(self)
+            roll_copy.invert_biscuits(index1, index2)
+            return roll_copy
         self._biscuits[index1], self._biscuits[index2] = self._biscuits[index2], self._biscuits[index1]
 
     def mix_biscuits(self, copy=False):
@@ -63,28 +91,58 @@ class Roll:
         else:
             return rng.shuffle(self._biscuits)
 
-    def total_price(self):
-        sum([biscuit.value for biscuit in self._biscuits])
+    def total_price(self, check_biscuit_valid=True):
+        if check_biscuit_valid:
+            if not self.check_biscuits_tolerance()[0]:
+                return float('-inf')
+        return sum([biscuit.value if biscuit is not None else 0 for biscuit in self._biscuits])
 
     def number_of_biscuits(self):
         return len(self._biscuits)
 
-    def fill_roll_random(self, remove_invalid_biscuits=False):
-        integers = rng.integers(0, 3, 250)
+    def dough_length(self):
+        return sum([biscuit.size for biscuit in self._biscuits])
+
+    # function that fills the roll randomly
+    def fill_roll_random(self, check_biscuit_valid=True):
+        # list of random integers between 0 and 3
+        # the list goes from 0 to 250, as the smallest biscuit is of size 2 and the roll length is 500
+        integers = rng.integers(0, 4, size=self.roll_size//2)
+        # the position cursor keeps track of the length of the all the biscuits currently on the roll
         position = 0
         for i in integers:
             new_biscuit = biscuit_types[i]
+            defects_in_range = Roll.get_defects_between(position, position + new_biscuit.size)
+            # if the biscuit spills over the roll, we try to find a biscuit that fits at the end among the biscuit types
             if position + new_biscuit.size >= self.roll_size:
-                return
-            else:
-                if remove_invalid_biscuits:
-                    defects_in_range = Roll.get_defects_between(position, position + new_biscuit.size)
-                    if not new_biscuit.is_valid(defects_in_range):
-                        self.append_biscuits([None])
+                if check_biscuit_valid:
+                    best_fit_biscuit = Roll.replace_defect_biscuit(position, size_limit=self.roll_size - position)
+                    self.append_biscuits([best_fit_biscuit])
+                    if best_fit_biscuit is not None:
+                        position += best_fit_biscuit.size
                     else:
-                        self.append_biscuits(new_biscuit)
+                        position += 1
+                    return
                 else:
+                    return
+
+            # if there's room for the biscuit, we add it to the roll and check its defects
+            if check_biscuit_valid:
+                if new_biscuit.is_valid(defects_in_range):
                     self.append_biscuits(new_biscuit)
+                    position += new_biscuit.size
+                # if the biscuit is not valid, we try to add an other biscuit from the biggest to the smallest
+                # the array of biscuits is already sorted, so we can directly iterate over them
+                else:
+                    best_fit_biscuit = Roll.replace_defect_biscuit(position)
+                    self.append_biscuits([best_fit_biscuit])
+                    if best_fit_biscuit is not None:
+                        position += best_fit_biscuit.size
+                    else:
+                        position += 1
+            else:
+                self.append_biscuits(new_biscuit)
+                position += new_biscuit.size
 
     def check_biscuits_tolerance(self):
         position = 0
@@ -93,19 +151,32 @@ class Roll:
                 position += 1
                 continue
 
-            total_defects_at_position = dict()
-            for defect in Roll.get_defects_between(position, position + biscuit.size):
-                defect_class = defect['class']
-                total_defects_at_position[defect_class] += 1
-            if biscuit.is_valid(total_defects_at_position):
+            defects_in_range = Roll.get_defects_between(position, position + biscuit.size)
+            if not biscuit.is_valid(defects_in_range):
                 return False, i
 
         return True
 
     @staticmethod
+    def replace_defect_biscuit(position, size_limit=-1):
+        for biscuit_type in biscuit_types:
+            defects_in_range = Roll.get_defects_between(position, position + biscuit_type.size)
+            if biscuit_type.is_valid(defects_in_range) and biscuit_type.size < size_limit:
+                return biscuit_type
+        return None
+
+    @staticmethod
     def get_defects_between(a, b):
-        return filter(lambda roll_defect: a < roll_defect['x'] < b, defects_list)
+        return [defect for defect in defects_list if a < defect.get('x') < b]
 
     @staticmethod
     def get_defects_between_iter(a, b):
-        pass
+        raise NotImplementedError
+
+    @staticmethod
+    def create_roll(**options):
+        if options.get('random'):
+            r = Roll()
+            r.fill_roll_random()
+            return r
+
