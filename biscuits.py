@@ -93,7 +93,7 @@ class Roll:
 
     def total_price(self, check_biscuit_valid=True):
         if check_biscuit_valid:
-            if not self.check_biscuits_tolerance()[0]:
+            if not self.check_biscuits_tolerance():
                 return float('-inf')
         return sum([biscuit.value if biscuit is not None else 0 for biscuit in self._biscuits])
 
@@ -153,8 +153,7 @@ class Roll:
 
             defects_in_range = Roll.get_defects_between(position, position + biscuit.size)
             if not biscuit.is_valid(defects_in_range):
-                return False, i
-
+                return False
         return True
 
     @staticmethod
@@ -180,3 +179,7 @@ class Roll:
             r.fill_roll_random()
             return r
 
+
+if __name__ == '__main__':
+    roll = Roll(500)
+    roll.fill_roll_random()

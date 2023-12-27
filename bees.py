@@ -296,11 +296,12 @@ class Food:
         return self.quantity == 0
 
 
-print(
-    bee_search(evaluate_roll,
-               minimize=False,
-               n_bees=50,
-               n_scouts=1,
-               max_iter=10,
-               limit=1).location.total_price()
-)
+if __name__ == '__main__':
+    print(
+        bee_search(evaluate_roll,
+                   minimize=False,
+                   n_bees=50,
+                   n_scouts=1,
+                   max_iter=10,
+                   limit=1).location.total_price()
+    )
