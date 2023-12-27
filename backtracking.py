@@ -1,4 +1,4 @@
-from biscuits import biscuit_types, defects_list, Roll
+from biscuits_clement import biscuit_types, defects_list, Roll
 
 
 # Helper function to check if a biscuit can be placed considering defects and overlapping
