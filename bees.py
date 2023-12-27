@@ -1,5 +1,5 @@
 import numpy as np
-from biscuits import Roll, biscuit_types
+from biscuits_racel import Roll, biscuit_types
 from numpy.random import default_rng
 
 # assign rng
@@ -307,3 +307,4 @@ if __name__ == '__main__':
                            max_iter=100,
                            limit=1)
     print(f'Best price is : {best_food.location.total_price()}, best number of biscuits is :{best_food.location.number_of_biscuits()}')
+    print(f'Best food biscuit counts is : {best_food.location.biscuit_type_count()}')

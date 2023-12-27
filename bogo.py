@@ -1,4 +1,4 @@
-from biscuits import Roll
+from biscuits_racel import Roll
 
 
 def bogo(max_iter):

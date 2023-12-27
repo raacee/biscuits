@@ -82,13 +82,6 @@ class Roll:
     def number_of_biscuits(self):
         return len(self._biscuits)
 
-    def biscuit_type_count(self):
-        biscuits_counts = {biscuit_type.size: 0 for biscuit_type in biscuit_types}
-        for biscuit_type in self._biscuits:
-            if biscuit_type is not None:
-                biscuits_counts[biscuit_type.size] += 1
-        return biscuits_counts
-
     def fill_roll_random(self, adjust_invalid_biscuits=False):
         integers = rng.integers(0, 3, 500)
         length_of_roll = 0
@@ -111,6 +104,13 @@ class Roll:
             else:
                 self._biscuits.append(new_biscuit)
                 length_of_roll += new_biscuit.size
+
+    def biscuit_type_count(self):
+        biscuits_counts = {biscuit_type.size: 0 for biscuit_type in biscuit_types}
+        for biscuit_type in self._biscuits:
+            if biscuit_type is not None:
+                biscuits_counts[biscuit_type['biscuit'].size] += 1
+        return biscuits_counts
 
     def check_roll_biscuits(self, start=0):
         position = start

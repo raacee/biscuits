@@ -1,4 +1,4 @@
-from biscuits import biscuit_types, defects_list, Roll
+from biscuits_clement import biscuit_types, defects_list, Roll
 from constraint import Problem
 
 
@@ -77,6 +77,7 @@ best_roll = greedy_heuristic()
 
 # Now you can access the total value and other properties of the best_roll
 print(f"The total value of the best roll is: {best_roll.total_value()}")
+print(f"The biscuits counts of the best roll is: {best_roll.biscuit_type_count()}")
 
 # To get the number of each biscuit type in the best roll
 biscuit_count = {}
