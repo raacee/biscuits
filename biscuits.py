@@ -71,7 +71,7 @@ class Roll:
     def append_biscuits(self, biscuits):
         if isinstance(biscuits, list):
             self._biscuits += biscuits
-        elif isinstance(biscuits, Biscuit):
+        elif isinstance(biscuits, Biscuit) or isinstance(biscuits, dict):
             self._biscuits.append(biscuits)
         else:
             raise ValueError('Biscuits should be a list or a Biscuit')
@@ -91,11 +91,12 @@ class Roll:
         else:
             return rng.shuffle(self._biscuits)
 
-    def total_price(self, check_biscuit_valid=True):
-        if check_biscuit_valid:
-            if not self.check_biscuits_tolerance():
-                return float('-inf')
-        return sum([biscuit.value if biscuit is not None else 0 for biscuit in self._biscuits])
+    def total_price(self):
+        return sum([
+            biscuit.value if isinstance(biscuit, Biscuit)
+            else biscuit['biscuit'] if isinstance(biscuit, Biscuit)
+            else 0 for biscuit in self._biscuits
+        ])
 
     def number_of_biscuits(self):
         return len(self._biscuits)
