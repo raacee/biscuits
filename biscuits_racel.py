@@ -94,6 +94,8 @@ class Roll:
         else:
             return rng.shuffle(self._biscuits)
 
+    # returns the price of all the biscuits in the roll to be sold
+    # is the function to be optimized so the company can fit the arrangement of biscuits that will maximize
     def total_price(self):
         return sum([
             biscuit.value if isinstance(biscuit, Biscuit)
@@ -148,18 +150,23 @@ class Roll:
                 self.append_biscuits(new_biscuit)
                 position += new_biscuit.size
 
+    # Checks if the all the biscuits in the roll satisfy their constraint of defects
     def check_biscuits_tolerance(self):
         position = 0
         for i, biscuit in enumerate(self._biscuits):
+            # if no biscuit is at position, advance and go to next iteration
             if biscuit is None:
                 position += 1
                 continue
-
+            # else we have to retrieve the defects present on the biscuit from the defects_list
+            # and check if the biscuit is valid
             defects_in_range = Roll.get_defects_between(position, position + biscuit.size)
             if not biscuit.is_valid(defects_in_range):
                 return False
         return True
 
+    # counts the number of biscuit of each type in the roll
+    # returns a dict with biscuit size as key and the number of their occurrences in the roll
     def biscuit_type_count(self):
         biscuits_counts = {biscuit_type.size: 0 for biscuit_type in biscuit_types}
         for biscuit_type in self._biscuits:
@@ -167,6 +174,7 @@ class Roll:
                 biscuits_counts[biscuit_type.size] += 1
         return biscuits_counts
 
+    # try to replace defect biscuit with an other biscuit
     @staticmethod
     def replace_defect_biscuit(position, size_limit=-1):
         for biscuit_type in biscuit_types:
@@ -175,14 +183,22 @@ class Roll:
                 return biscuit_type
         return None
 
+    # get defects on the roll between two positions
     @staticmethod
     def get_defects_between(a, b):
         return [defect for defect in defects_list if a < defect['x'] < b]
 
+    # not implemented and not used
+    # get defects on the roll between two positions
+    # the idea was to store the position in a variable and to return a generator that would keep the position as a value
+    # so the function would skip all the positions
+    # that would have an x value before the current position of the generator and retrieves defects faster
     @staticmethod
     def get_defects_between_iter(a, b):
         raise NotImplementedError
 
+    # returns a roll with options
+    # not used
     @staticmethod
     def create_roll(**options):
         if options.get('random'):

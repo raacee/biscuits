@@ -18,3 +18,4 @@ def bogo(max_iter):
 if __name__ == '__main__':
     best_r, best_s = bogo(500)
     print(f'Best price is : {best_s}, best number of biscuits is :{best_r.number_of_biscuits()}')
+    print(f'Best price is : {best_s}, best number of biscuits is :{best_r.number_of_biscuits()}')
