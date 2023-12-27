@@ -160,6 +160,13 @@ class Roll:
                 return False
         return True
 
+    def biscuit_type_count(self):
+        biscuits_counts = {biscuit_type.size: 0 for biscuit_type in biscuit_types}
+        for biscuit_type in self._biscuits:
+            if biscuit_type is not None:
+                biscuits_counts[biscuit_type.size] += 1
+        return biscuits_counts
+
     @staticmethod
     def replace_defect_biscuit(position, size_limit=-1):
         for biscuit_type in biscuit_types:
@@ -188,3 +195,4 @@ if __name__ == '__main__':
     roll = Roll(500)
     roll.fill_roll_random()
     print(roll.total_price())
+    print(roll.biscuit_type_count())
