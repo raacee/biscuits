@@ -7,12 +7,17 @@ rng = np.random.default_rng()
 with open('defects.csv', 'r') as f:
     defects_list = DictReader(f)
 
+    # This throws a bug that empties defects_list
+    # defect_types = set([defect['class'] for defect in defects_list])
+
     def x_to_float(elem):
         elem['x'] = float(elem['x'])
         return elem
 
+
     defects_list = map(x_to_float, defects_list)
     defects_list = list(sorted(defects_list, key=lambda d: d['x']))
+    defect_types = set([defect['class'] for defect in defects_list])
 
 
 class Biscuit:
@@ -22,22 +27,20 @@ class Biscuit:
         self.tolerance = tolerance
 
     def is_valid(self, defects):
-        defects_dict = self.dict_sums_defects(defects)
-        if defects_dict.keys() != self.tolerance.keys():
-            return False
-        for k in defects_dict:
-            if self.tolerance[k] < defects_dict[k]:
+        defects_sums = self.dict_sums_defects(defects)
+        if defects_sums.keys() != self.tolerance.keys():
+            raise ValueError('Defects keys are different')
+        for k in defects_sums:
+            if self.tolerance[k] < defects_sums[k]:
                 return False
         return True
 
     @staticmethod
     def dict_sums_defects(defects):
-        possible_defects = set([list(defect.values())[1] for defect in defects])
-        defects_sums = {defect_type: 0 for defect_type in possible_defects}
-
+        defects_sums = {defect_type: 0 for defect_type in defect_types}
         for defect in defects:
-            defecty_type = defect['class']
-            defects_sums[defecty_type] += 1
+            defect_type = defect['class']
+            defects_sums[defect_type] += 1
 
         return defects_sums
 
@@ -74,7 +77,7 @@ class Roll:
         elif isinstance(biscuits, Biscuit) or isinstance(biscuits, dict):
             self._biscuits.append(biscuits)
         else:
-            raise ValueError('Biscuits should be a list or a Biscuit')
+            raise ValueError(f'Biscuits should be a list or a Biscuit, biscuit is {biscuits.__class__.__name__}')
 
     def invert_biscuits(self, index1, index2, copy=False):
         if copy:
@@ -108,7 +111,7 @@ class Roll:
     def fill_roll_random(self, check_biscuit_valid=True):
         # list of random integers between 0 and 3
         # the list goes from 0 to 250, as the smallest biscuit is of size 2 and the roll length is 500
-        integers = rng.integers(0, 4, size=self.roll_size//2)
+        integers = rng.integers(0, 4, size=self.roll_size // 2)
         # the position cursor keeps track of the length of the all the biscuits currently on the roll
         position = 0
         for i in integers:
@@ -167,7 +170,7 @@ class Roll:
 
     @staticmethod
     def get_defects_between(a, b):
-        return [defect for defect in defects_list if a < defect.get('x') < b]
+        return [defect for defect in defects_list if a < defect['x'] < b]
 
     @staticmethod
     def get_defects_between_iter(a, b):
@@ -184,3 +187,4 @@ class Roll:
 if __name__ == '__main__':
     roll = Roll(500)
     roll.fill_roll_random()
+    print(roll.total_price())
