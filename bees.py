@@ -25,7 +25,10 @@ names = ["Patricia",
 
 
 def evaluate_roll(roll):
-    return roll.total_price()
+    if roll.check_biscuits_tolerance():
+        return roll.total_price()
+    else:
+        return 0.0
 
 
 # This function by default searches for the maximum of the objective function
@@ -297,11 +300,10 @@ class Food:
 
 
 if __name__ == '__main__':
-    print(
-        bee_search(evaluate_roll,
-                   minimize=False,
-                   n_bees=50,
-                   n_scouts=1,
-                   max_iter=10,
-                   limit=1).location.total_price()
-    )
+    best_food = bee_search(evaluate_roll,
+                           minimize=False,
+                           n_bees=50,
+                           n_scouts=1,
+                           max_iter=100,
+                           limit=1)
+    print(f'Best price is : {best_food.location.total_price()}, best number of biscuits is :{best_food.location.number_of_biscuits()}')
